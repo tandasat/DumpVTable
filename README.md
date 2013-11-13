@@ -13,7 +13,7 @@ Usage
             It may require Administrators privilege.
         -y: Do not show a warning message.
 
-As an example, you are going to analyze Flash10zr.ocx with IDA Pro. 
+As an example, assuming that you are going to analyze Flash10zr.ocx with IDA Pro. 
 
 First, you can use this tool to create a Python script (out.py).
 
