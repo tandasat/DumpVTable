@@ -19,15 +19,15 @@ First, you can use this tool to create a Python script (out.py).
 
     >DumpVTable.exe C:\Windows\SysWOW64\Macromed\Flash\Flash10zr.ocx out.py
 
-Then, you can apply the script on IDA Pro.
+Next, you can open the target file with IDA Pro.
 
 ![Before](/img/before.png)
 
-It becomes:
+Then, you apply the script to the IDB from [File] > [Script file] menu on IDA Pro.
 
 ![After](/img/after.png)
 
-All done!
+That's it. Have fun! 
 
 
 Note
