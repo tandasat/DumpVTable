@@ -89,7 +89,7 @@ bool GetSymbolNames(
     std::vector<const Symbol>& Symbols,
     const std::wstring& TargetFilePath);
 
-HMODULE GetAssosiatedModule(
+HMODULE GetAssociatedModule(
     uintptr_t Address);
 
 bool HasTypeInfo(
@@ -170,8 +170,8 @@ bool AppMain(
             << "usage:\n"
             << "    >this.exe target.ocx out.py [-r] [-y]\n"
             << "\n"
-            << "    -r: Register a target file as COM during anylysis.\n"
-            << "        It may require Adminisrators privilege.\n"
+            << "    -r: Register a target file as COM during analysis.\n"
+            << "        It may require Administrators privilege.\n"
             << "    -y: Do not show a warning message.\n"
             << std::endl;
         return false;
@@ -230,7 +230,7 @@ bool AppMain(
 
 
 // Ask if it is okay to execute code in the given file
-// Return true when user replyed yes.
+// Return true when user replied yes.
 bool IsOkayToExecuteTargetFile()
 {
     std::cout
@@ -469,8 +469,8 @@ bool GetSymbolNames(
     const auto interfaceName = GetInterfaceName(typeInfo);
     const auto addressOfVTable = *reinterpret_cast<uintptr_t*>(unknown);
 
-    // Make sure if an asssociated file is the target file.
-    const auto moduleBase = GetAssosiatedModule(addressOfVTable);
+    // Make sure if an associated file is the target file.
+    const auto moduleBase = GetAssociatedModule(addressOfVTable);
     const auto modulePath = GetModuleName(moduleBase);
     if (TargetFilePath != modulePath)
     {
@@ -526,7 +526,7 @@ bool GetSymbolNames(
 
 
 // Return the module handle of the file contains the address.
-HMODULE GetAssosiatedModule(
+HMODULE GetAssociatedModule(
     uintptr_t Address)
 {
     auto snapshotHandle = make_unique_ptr(
