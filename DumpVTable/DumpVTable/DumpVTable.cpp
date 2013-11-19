@@ -217,10 +217,10 @@ bool AppMain(
 
     // Obtain interesting CLSIDs in the given file.
     std::vector<const Symbol> symbols;
-    for (const auto& name : GetClassIDsFromFile(targetFileFullPath))
+    for (const auto& clsid : GetClassIDsFromFile(targetFileFullPath))
     {
         // Obtain a name and its address of the public methods
-        GetSymbolNames(name, symbols, targetFileFullPath);
+        GetSymbolNames(clsid, symbols, targetFileFullPath);
     }
 
     // Create output from obtained information.

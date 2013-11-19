@@ -13,7 +13,7 @@ Usage
             It may require Administrators privilege.
         -y: Do not show a warning message.
 
-As an example, assuming that you are going to analyze Flash10zr.ocx with IDA Pro. 
+As an example, assuming that you are going to analyze Flash10zr.ocx with IDA Pro.
 
 First, you can use this tool to create a Python script (out.py).
 
@@ -27,18 +27,19 @@ Then, you apply the script to the IDB from [File] > [Script file] menu on IDA Pr
 
 ![After](/img/after.png)
 
-That's it. Have fun! 
+That's it. Have fun!
 
 
 Note
 -----------------
 - When you see the error message 'ERROR: CoCreateInstance returned 80040154', you will need to register the target file with a command line option '-r'.
+- When you see the error message 'ERROR: File mismatch [<path>]', you will need to specify <path> as a target file.
 
 
 Supported Platforms
 -----------------
-- Windows XP SP3 
-- 7 SP1
+- Windows XP SP3
+- Windows 7 SP1
 - IDA Pro Standard version 6 and later.
 - Cannot handle 64bit target files.
 
