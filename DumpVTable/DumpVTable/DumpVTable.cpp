@@ -122,6 +122,9 @@ std::string GetErrorMessage(
 std::wstring GetModuleName(
     HMODULE ModuleHandle);
 
+std::wstring GUIDToString(
+    const GUID& GloballyUniqueId);
+
 
 ////////////////////////////////////////////////////////////////////////////////
 //
@@ -155,7 +158,7 @@ int wmain(int argc, wchar_t* argv[])
     }
     catch (...)
     {
-        std::cout << "[FATAL] Unknown Exception." << std::endl;
+        std::cout << "FATAL: An unknown exception was thrown." << std::endl;
     }
     return result;
 }
@@ -168,8 +171,10 @@ bool AppMain(
     {
         std::cout
             << "usage:\n"
-            << "    >this.exe target.ocx out.py [-r] [-y]\n"
+            << "    >this.exe target_file out_file [-r] [-y]\n"
             << "\n"
+            << "    target_file: A path of a target COM file.\n"
+            << "    out_file: A file name of an output Python script.\n"
             << "    -r: Register a target file as COM during analysis.\n"
             << "        It may require Administrators privilege.\n"
             << "    -y: Do not show a warning message.\n"
@@ -219,8 +224,25 @@ bool AppMain(
     std::vector<const Symbol> symbols;
     for (const auto& clsid : GetClassIDsFromFile(targetFileFullPath))
     {
-        // Obtain a name and its address of the public methods
-        GetSymbolNames(clsid, symbols, targetFileFullPath);
+        try
+        {
+            // Obtain a name and its address of the public methods
+            GetSymbolNames(clsid, symbols, targetFileFullPath);
+        }
+        catch (std::exception&)
+        {
+            // C++ exception is most likely a bug of this program,
+            // so this program re-thorw it and stops.
+            throw;
+        }
+        catch (...)
+        {
+            // Some files raise SEH exception. This program is not
+            // responsible for it, so this program continues the process.
+            std::cout << FormatString(
+                "ERROR: An unknown exception was thrown.")
+                << std::endl;
+        }
     }
 
     // Create output from obtained information.
@@ -256,8 +278,8 @@ bool IsOkayToExecuteTargetFile()
 }
 
 
-// Return the difference between ImageBase in the file and ImageBase 
-// in the current process image. This value is necessary to ignore effect 
+// Return the difference between ImageBase in the file and ImageBase
+// in the current process image. This value is necessary to ignore effect
 // of ASLR to create a Python script.
 // Throw std::runtime_error when the value cannot be obtained.
 intptr_t GetGapByASLR(
@@ -285,7 +307,7 @@ intptr_t GetGapByASLR(
         throw std::runtime_error(msg);
     }
 
-    // Get distance between the head of the file 
+    // Get distance between the head of the file
     // and an address of ImageBase field.
     const auto offset =
         reinterpret_cast<uintptr_t>(&header->OptionalHeader.ImageBase) -
@@ -383,17 +405,13 @@ bool GetComponentObjectClassId(
     auto ifTypeAttributeScope = make_unique_ptr(ifTypeAttribute,
         [IFTypeInfo](TYPEATTR* p) { IFTypeInfo->ReleaseTypeAttr(p); });
 
-
     // Just log
     const auto interfaceName = GetInterfaceName(IFTypeInfo);
-    wchar_t guidStr[40] = {};
-    if (::StringFromGUID2(ifTypeAttribute->guid, guidStr, _countof(guidStr)))
-    {
-        std::cout << FormatString(
-            "INFO : [CLSID] %-20S %d %S",
-            guidStr, ifTypeAttribute->typekind, interfaceName.c_str())
-            << std::endl;
-    }
+    std::cout << FormatString(
+        "INFO : [CLSID] %-20S %d %S",
+        GUIDToString(ifTypeAttribute->guid).c_str(),
+        ifTypeAttribute->typekind, interfaceName.c_str())
+        << std::endl;
 
     if (ifTypeAttribute->typekind != TKIND_COCLASS)
     {
@@ -421,7 +439,8 @@ bool GetSymbolNames(
     if (!SUCCEEDED(result))
     {
         const auto msg = FormatString(
-            "ERROR: CoCreateInstance returned %08X [%s]",
+            "ERROR: %S CoCreateInstance returned %08X [%s]",
+            GUIDToString(ClassId).c_str(),
             result, GetErrorMessage(result).c_str());
         std::cout << msg << std::endl;
         return false;
@@ -437,7 +456,8 @@ bool GetSymbolNames(
     if (!SUCCEEDED(result))
     {
         const auto msg = FormatString(
-            "ERROR: IUnknown::QueryInterface returned %08X [%s]",
+            "ERROR: %S IUnknown::QueryInterface returned %08X [%s]",
+            GUIDToString(ClassId).c_str(),
             result, GetErrorMessage(result).c_str());
         std::cout << msg << std::endl;
         return false;
@@ -449,7 +469,8 @@ bool GetSymbolNames(
     if (!HasTypeInfo(dispatch))
     {
         const auto msg = FormatString(
-            "ERROR: IDispatch does not have type information.");
+            "ERROR: %S IDispatch does not have type information.",
+            GUIDToString(ClassId).c_str());
         std::cout << msg << std::endl;
         return false;
     }
@@ -459,7 +480,8 @@ bool GetSymbolNames(
     if (!SUCCEEDED(result))
     {
         const auto msg = FormatString(
-            "ERROR: IDispatch::GetTypeInfoCount returned %08X [%s]",
+            "ERROR: %S IDispatch::GetTypeInfoCount returned %08X [%s]",
+            GUIDToString(ClassId).c_str(),
             result, GetErrorMessage(result).c_str());
         std::cout << msg << std::endl;
         return false;
@@ -475,7 +497,9 @@ bool GetSymbolNames(
     if (TargetFilePath != modulePath)
     {
         const auto msg = FormatString(
-            "ERROR: File mismatch [%S]", modulePath.c_str());
+            "ERROR: %S File mismatch [%S]",
+            GUIDToString(ClassId).c_str(),
+            modulePath.c_str());
         std::cout << msg << std::endl;
         return false;
     }
@@ -494,7 +518,8 @@ bool GetSymbolNames(
     if (!SUCCEEDED(result))
     {
         const auto msg = FormatString(
-            "ERROR: ITypeInfo::GetTypeAttr returned %08X [%s]",
+            "ERROR: %S ITypeInfo::GetTypeAttr returned %08X [%s]",
+            GUIDToString(ClassId).c_str(),
             result, GetErrorMessage(result).c_str());
         std::cout << msg << std::endl;
         return false;
@@ -510,7 +535,8 @@ bool GetSymbolNames(
         if (!SUCCEEDED(result))
         {
             const auto msg = FormatString(
-                "ERROR: ITypeInfo::GetFuncDesc returned %08X [%s]",
+                "ERROR: %S ITypeInfo::GetFuncDesc returned %08X [%s]",
+                GUIDToString(ClassId).c_str(),
                 result, GetErrorMessage(result).c_str());
             std::cout << msg << std::endl;
             continue;
@@ -633,7 +659,7 @@ std::wstring GetMethodOrPropertyName(
 }
 
 
-// Create an output file. 
+// Create an output file.
 // Return true when an effective file is created.
 // Throw std::runtime_error when the output file cannot be created.
 bool GenerateOutput(
@@ -644,7 +670,7 @@ bool GenerateOutput(
     if (Symbols.empty())
     {
         const auto msg = FormatString(
-            "INFO : The given file does not have any information.");
+            "INFO : Information was not obtained form the given file.");
         std::cout << msg << std::endl;
         return false;
     }
@@ -754,6 +780,23 @@ std::wstring GetModuleName(
 }
 
 
+// Convert GUID to a string.
+std::wstring GUIDToString(
+    const GUID& GloballyUniqueId)
+{
+    wchar_t str[40] = {};
+    if (!::StringFromGUID2(GloballyUniqueId, str, _countof(str)))
+    {
+        const auto errorCode = ::GetLastError();
+        const auto msg = FormatString(
+            "FATAL: StringFromGUID2 failed %08X [%s]",
+            errorCode, GetErrorMessage(errorCode).c_str());
+        throw std::runtime_error(msg);
+    }
+    return str;
+}
+
+
 //
 // ScopedOleInitialize
 //
@@ -784,7 +827,7 @@ ScopedOleInitialize::~ScopedOleInitialize()
 //
 
 // Execute DllRegisterServer function in the target file to register it.
-// Throw std::runtime_error when the registration failed or the unregister 
+// Throw std::runtime_error when the registration failed or the unregister
 // function cannot be found.
 ScopedDllRegisterServer::ScopedDllRegisterServer(
     const std::wstring& FilePath)
