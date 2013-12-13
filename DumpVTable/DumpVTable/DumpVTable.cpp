@@ -263,7 +263,7 @@ bool IsOkayToExecuteTargetFile()
 
     for (;;)
     {
-        std::cout << "Do you want to continue? [y/n]: ";
+        std::cout << "Do you want to continue? (y/n): ";
         std::string input;
         std::cin >> input;
         if (input == "y" || input == "Y")
@@ -431,6 +431,19 @@ bool GetSymbolNames(
     std::vector<const Symbol>& Symbols,
     const std::wstring& TargetFilePath)
 {
+    //ITypeLib* typelib = nullptr;
+    //auto result1 = ::LoadTypeLibEx(TargetFilePath.c_str(), REGKIND_NONE, &typelib);
+
+    //ITypeInfo* typeInfo1 = nullptr;
+    //result1 = typelib->GetTypeInfoOfGuid(ClassId, &typeInfo1);
+
+    //if (ClassId.Data1 == 0x82282821)
+    //{
+    //    FUNCDESC* funcDesc2 = nullptr;
+    //    result1 = typeInfo1->GetFuncDesc(2, &funcDesc2);
+    //    Sleep(0);
+    //}
+
     // Query IUnknown interface
     IUnknown* unknown = nullptr;
     auto result = ::CoCreateInstance(ClassId, nullptr,
@@ -489,8 +502,11 @@ bool GetSymbolNames(
 
     // Get a name of the interface and an address of its vtable.
     const auto interfaceName = GetInterfaceName(typeInfo);
-    const auto addressOfVTable = *reinterpret_cast<uintptr_t*>(unknown);
-
+    const auto addressOfVTable = *reinterpret_cast<uintptr_t*>(dispatch);
+    //if (addressOfVTable == 0x2013e0ec)
+    //{
+    //    Sleep(0);
+    //}
     // Make sure if an associated file is the target file.
     const auto moduleBase = GetAssociatedModule(addressOfVTable);
     const auto modulePath = GetModuleName(moduleBase);
@@ -532,6 +548,8 @@ bool GetSymbolNames(
         // Get a description of the entry.
         FUNCDESC* funcDesc = nullptr;
         result = typeInfo->GetFuncDesc(i, &funcDesc);
+        //FUNCDESC* funcDesc2 = nullptr;
+        //result1 = typeInfo1->GetFuncDesc(i, &funcDesc2);
         if (!SUCCEEDED(result))
         {
             const auto msg = FormatString(
@@ -627,7 +645,8 @@ Symbol GetSymbolForDescription(
     const auto finalName = VTable.name + L"__" + prefix + name;
 
     std::cout << FormatString(
-        "INFO : [METHOD] %p %S", address, finalName.c_str())
+        "INFO : [METHOD] %3d %p %S", 
+        FuncDesc->oVft / 4, address, finalName.c_str())
         << std::endl;
     return{ address, finalName };
 }
