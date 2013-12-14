@@ -1,5 +1,6 @@
 #include "stdafx.h"
 
+// TODO: Should not throw exceptions from destructors
 
 #define _CRTDBG_MAP_ALLOC
 #include <stdlib.h>
@@ -732,11 +733,11 @@ if __name__ == '__main__':
     fprintf(file, "DUMPED_DATA = [\n");
     for (const auto& symbol : Symbols)
     {
-        fprintf(file, "[0x%08x, '%S'],\n",
+        fprintf(file, "    [0x%08x, '%S'],\n",
             symbol.address + Gap, symbol.name.c_str());
     }
-    fprintf(file, "]\n");
-    fprintf(file, "%s\n", SCRIPT);
+    fprintf(file, "]\n\n");
+    fprintf(file, "%s", SCRIPT);
     return true;
 }
 
