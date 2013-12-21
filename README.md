@@ -7,8 +7,10 @@ Usage
 -----------------
     >DumpVTable.exe
     usage:
-        >this.exe target.ocx out.py [-r] [-y]
+        >this.exe target_file out_file [-r] [-y]
 
+        target_file: A path of a target COM file.
+        out_file: A file name of an output Python script.
         -r: Register a target file as COM during analysis.
             It may require Administrators privilege.
         -y: Do not show a warning message.

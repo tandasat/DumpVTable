@@ -315,7 +315,7 @@ intptr_t GetGapByASLR(
         reinterpret_cast<uintptr_t>(module.get());
 
     // Read ImageBase field from the file.
-    std::ifstream file(FilePath, std::ios::binary);
+    auto file = std::ifstream{ FilePath, std::ios::binary };
     if (!file)
     {
         const auto msg = FormatString("FATAL: std::ifstream failed.");
@@ -432,19 +432,6 @@ bool GetSymbolNames(
     std::vector<const Symbol>& Symbols,
     const std::wstring& TargetFilePath)
 {
-    //ITypeLib* typelib = nullptr;
-    //auto result1 = ::LoadTypeLibEx(TargetFilePath.c_str(), REGKIND_NONE, &typelib);
-
-    //ITypeInfo* typeInfo1 = nullptr;
-    //result1 = typelib->GetTypeInfoOfGuid(ClassId, &typeInfo1);
-
-    //if (ClassId.Data1 == 0x82282821)
-    //{
-    //    FUNCDESC* funcDesc2 = nullptr;
-    //    result1 = typeInfo1->GetFuncDesc(2, &funcDesc2);
-    //    Sleep(0);
-    //}
-
     // Query IUnknown interface
     IUnknown* unknown = nullptr;
     auto result = ::CoCreateInstance(ClassId, nullptr,
@@ -504,10 +491,7 @@ bool GetSymbolNames(
     // Get a name of the interface and an address of its vtable.
     const auto interfaceName = GetInterfaceName(typeInfo);
     const auto addressOfVTable = *reinterpret_cast<uintptr_t*>(dispatch);
-    //if (addressOfVTable == 0x2013e0ec)
-    //{
-    //    Sleep(0);
-    //}
+
     // Make sure if an associated file is the target file.
     const auto moduleBase = GetAssociatedModule(addressOfVTable);
     const auto modulePath = GetModuleName(moduleBase);
@@ -527,7 +511,6 @@ bool GetSymbolNames(
     std::cout << FormatString(
         "INFO : [VTABLE] %p %S", addressOfVTable, interfaceName.c_str())
         << std::endl;
-
 
     // Enumerate all entries of the interface (methods and properties).
     TYPEATTR* typeAttribute = nullptr;
@@ -549,8 +532,6 @@ bool GetSymbolNames(
         // Get a description of the entry.
         FUNCDESC* funcDesc = nullptr;
         result = typeInfo->GetFuncDesc(i, &funcDesc);
-        //FUNCDESC* funcDesc2 = nullptr;
-        //result1 = typeInfo1->GetFuncDesc(i, &funcDesc2);
         if (!SUCCEEDED(result))
         {
             const auto msg = FormatString(
@@ -562,6 +543,18 @@ bool GetSymbolNames(
         }
         auto libAttributeScope = make_unique_ptr(funcDesc,
             [typeInfo](FUNCDESC* p) { typeInfo->ReleaseFuncDesc(p); });
+
+        // In some classes, oVft have always 0. This code fills oVft with
+        // a dummy offset.
+        // TODO: fix it.
+        if (funcDesc->oVft == 0 && i != 0)
+        {
+            funcDesc->oVft = static_cast<SHORT>(i * 4);
+            const auto msg = FormatString(
+                "WARN : %S VTable index has been modified to %d.",
+                GUIDToString(ClassId).c_str(), i);
+            std::cout << msg << std::endl;
+        }
 
         // Get interesting information from the description.
         Symbols.push_back(GetSymbolForDescription(typeInfo, funcDesc, vtable));
@@ -646,7 +639,7 @@ Symbol GetSymbolForDescription(
     const auto finalName = VTable.name + L"__" + prefix + name;
 
     std::cout << FormatString(
-        "INFO : [METHOD] %3d %p %S", 
+        "INFO : [METHOD] %3d %p %S",
         FuncDesc->oVft / 4, address, finalName.c_str())
         << std::endl;
     return{ address, finalName };
