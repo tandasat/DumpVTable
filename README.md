@@ -42,7 +42,7 @@ Supported Platforms
 -----------------
 - Windows 10 x64
 - IDA Pro 7.3 and later
-- Cannot handle 64bit target files.
+- x32/x64 bit both supported
 
 License
 -----------------
