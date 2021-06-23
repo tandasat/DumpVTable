@@ -40,9 +40,8 @@ Note
 
 Supported Platforms
 -----------------
-- Windows XP SP3
-- Windows 7 SP1
-- IDA Pro Standard version 6 and later.
+- Windows 10 x64
+- IDA Pro 7.3 and later
 - Cannot handle 64bit target files.
 
 License
