@@ -541,7 +541,7 @@ bool GetSymbolNames(
             std::cout << msg << std::endl;
             continue;
         }
-        auto libAttributeScope = make_unique_ptr(funcDesc,
+        auto funcDescScope = make_unique_ptr(funcDesc,
             [typeInfo](FUNCDESC* p) { typeInfo->ReleaseFuncDesc(p); });
 
         // In some classes, oVft have always 0. This code fills oVft with
@@ -654,7 +654,7 @@ std::wstring GetMethodOrPropertyName(
     UINT numberOfNames = 0;
     std::vector<BSTR> names(FuncDesc->cParams + 1);
     auto result = TypeInfo->GetNames(FuncDesc->memid,
-        names.data(), names.size(), &numberOfNames);
+        names.data(), static_cast<UINT>(names.size()), &numberOfNames);
     if (!SUCCEEDED(result))
     {
         const auto msg = FormatString(

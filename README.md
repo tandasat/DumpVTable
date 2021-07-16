@@ -44,6 +44,7 @@ Supported Platforms
 - IDA Pro 7.3 and later
 - x86/x64 bit both supported
 
+
 License
 -----------------
 This software is released under the MIT License, see LICENSE.
