@@ -727,7 +727,8 @@ if __name__ == '__main__':\n\
     for (const auto& symbol : Symbols)
     {
         fprintf(file, "    [0x%p, '%S'],\n",
-            symbol.address + Gap, symbol.name.c_str());
+            reinterpret_cast<void*>(symbol.address + Gap), symbol.name.c_str());
+
     }
     fprintf(file, "]\n\n");
     fprintf(file, "%s", SCRIPT);
@@ -895,4 +896,3 @@ ScopedDllRegisterServer::~ScopedDllRegisterServer()
         std::cout << msg << std::endl;
     }
 }
-
