@@ -71,23 +71,23 @@ private:
 //
 
 bool AppMain(
-    const std::vector<const std::wstring>& Args);
+    const std::vector<std::wstring>& Args);
 
 bool IsOkayToExecuteTargetFile();
 
 intptr_t GetGapByASLR(
     const std::wstring& FilePath);
 
-std::vector<const CLSID> GetClassIDsFromFile(
+std::vector<CLSID> GetClassIDsFromFile(
     const std::wstring& FilePath);
 
 bool GetComponentObjectClassId(
     ITypeInfo* IFTypeInfo,
-    std::vector<const CLSID>& ClassIDs);
+    std::vector<CLSID>& ClassIDs);
 
 bool GetSymbolNames(
     const CLSID& ClassId,
-    std::vector<const Symbol>& Symbols,
+    std::vector<Symbol>& Symbols,
     const std::wstring& TargetFilePath);
 
 HMODULE GetAssociatedModule(
@@ -110,7 +110,7 @@ std::wstring GetMethodOrPropertyName(
 
 bool GenerateOutput(
     const std::wstring& OutFilePath,
-    const std::vector<const Symbol>& Symbols,
+    const std::vector<Symbol>& Symbols,
     intptr_t Gap);
 
 std::string FormatString(
@@ -143,7 +143,7 @@ int wmain(int argc, wchar_t* argv[])
     int result = EXIT_FAILURE;
     try
     {
-        std::vector<const std::wstring> args;
+        std::vector<std::wstring> args;
         for (int i = 0; i < argc; ++i)
         {
             args.push_back(argv[i]);
@@ -166,7 +166,7 @@ int wmain(int argc, wchar_t* argv[])
 
 
 bool AppMain(
-    const std::vector<const std::wstring>& Args)
+    const std::vector<std::wstring>& Args)
 {
     if (Args.size() < 3)
     {
@@ -222,7 +222,7 @@ bool AppMain(
     const auto gapByASLR = GetGapByASLR(targetFileFullPath);
 
     // Obtain interesting CLSIDs in the given file.
-    std::vector<const Symbol> symbols;
+    std::vector<Symbol> symbols;
     for (const auto& clsid : GetClassIDsFromFile(targetFileFullPath))
     {
         try
@@ -340,10 +340,10 @@ intptr_t GetGapByASLR(
 
 
 // Collect all CLSIDs representing a Component Object in the given file.
-std::vector<const CLSID> GetClassIDsFromFile(
+std::vector<CLSID> GetClassIDsFromFile(
     const std::wstring& FilePath)
 {
-    std::vector<const CLSID> ClassIDs;
+    std::vector<CLSID> ClassIDs;
 
     // Get a type library.
     ITypeLib* typelib = nullptr;
@@ -391,7 +391,7 @@ std::vector<const CLSID> GetClassIDsFromFile(
 // returns true when CLSID is added.
 bool GetComponentObjectClassId(
     ITypeInfo* IFTypeInfo,
-    std::vector<const CLSID>& ClassIDs)
+    std::vector<CLSID>& ClassIDs)
 {
     TYPEATTR* ifTypeAttribute = nullptr;
     auto result = IFTypeInfo->GetTypeAttr(&ifTypeAttribute);
@@ -429,7 +429,7 @@ bool GetComponentObjectClassId(
 // The symbol is either a vtable address or a function address with its name.
 bool GetSymbolNames(
     const CLSID& ClassId,
-    std::vector<const Symbol>& Symbols,
+    std::vector<Symbol>& Symbols,
     const std::wstring& TargetFilePath)
 {
     // Query IUnknown interface
@@ -677,7 +677,7 @@ std::wstring GetMethodOrPropertyName(
 // Throw std::runtime_error when the output file cannot be created.
 bool GenerateOutput(
     const std::wstring& OutFilePath,
-    const std::vector<const Symbol>& Symbols,
+    const std::vector<Symbol>& Symbols,
     intptr_t Gap)
 {
     if (Symbols.empty())
@@ -696,38 +696,39 @@ bool GenerateOutput(
     }
     auto scopedFile = make_unique_ptr(file, fclose);
 
-    const char SCRIPT[] = R"(
-def make_name_n(address, name):
-    result = idc.MakeNameEx(address, name, SN_CHECK | SN_NOWARN)
-    if result:
-        return name
-
-    for i in range(100):
-        name_n = '{0}_{1}'.format(name, i)
-        result = idc.MakeNameEx(address, name_n, SN_CHECK | SN_NOWARN)
-        if result:
-            return name_n
-
-
-def main():
-    for entry in DUMPED_DATA:
-        address = entry[0]
-        name = entry[1]
-        oldname = idc.Name(address)
-        newname = make_name_n(address, name)
-        print '%08x %-40s => %s' % (address, oldname, newname)
-
-
-if __name__ == '__main__':
-    main()
-)";
+    const char SCRIPT[] = "\
+def make_name_n(address, name):\n\
+    result = idc.set_name(address, name, SN_CHECK | SN_NOWARN)\n\
+    if result:\n\
+        return name\n\
+\n\
+    for i in range(100):\n\
+        name_n = '{0}_{1}'.format(name, i)\n\
+        result = idc.set_name(address, name_n, SN_CHECK | SN_NOWARN)\n\
+        if result:\n\
+            return name_n\n\
+\n\
+\n\
+def main():\n\
+    for entry in DUMPED_DATA:\n\
+        address = entry[0]\n\
+        name = entry[1]\n\
+        oldname = idc.get_name(address)\n\
+        newname = make_name_n(address, name)\n\
+        print('%08x %-40s => %s' % (address, oldname, newname))\n\
+\n\
+\n\
+if __name__ == '__main__':\n\
+    main()\n\
+";
 
 
     fprintf(file, "DUMPED_DATA = [\n");
     for (const auto& symbol : Symbols)
     {
-        fprintf(file, "    [0x%08x, '%S'],\n",
-            symbol.address + Gap, symbol.name.c_str());
+        fprintf(file, "    [0x%p, '%S'],\n",
+            reinterpret_cast<void*>(symbol.address + Gap), symbol.name.c_str());
+
     }
     fprintf(file, "]\n\n");
     fprintf(file, "%s", SCRIPT);
@@ -895,4 +896,3 @@ ScopedDllRegisterServer::~ScopedDllRegisterServer()
         std::cout << msg << std::endl;
     }
 }
-
